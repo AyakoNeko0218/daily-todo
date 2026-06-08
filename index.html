@@ -75,6 +75,39 @@ button{
     font-size:0.9em;
 }
 
+
+.card{
+    margin-top:20px;
+    padding:15px;
+    border-radius:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.todo-card{
+    background:#FFE4EC;   /* ふんわりピンク */
+}
+
+.daily-card{
+     background:#eaffe8;    /* ラベンダー */
+}
+body{
+    font-family:sans-serif;
+    margin:10px;
+    max-width:800px;
+    margin:auto;
+    background:#FAFAFC;
+}
+#inputArea{
+    background:#fffeea;
+    padding:15px;
+    border-radius:16px;
+    margin-top:15px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+
+
 </style>
 </head>
 
@@ -93,25 +126,28 @@ button{
 
 <br>
 
-<label>
-    <input type="checkbox" id="dailyFlg">
-    毎日
-</label>
+<div id="inputArea">
+    <label>
+        <input type="checkbox" id="dailyFlg">
+        毎日
+    </label>
 
-<br><br>
+    <br><br>
 
-<input
-    type="text"
-    id="todoInput"
-    placeholder="ToDo入力（Enterで追加）"
->
-
-<div id="singleArea">
-    <h2>ToDo</h2>
-    <div id="singleList"></div>
+    <input
+        type="text"
+        id="todoInput"
+        placeholder="ToDo入力（Enterで追加）"
+    >
 </div>
 
-<div id="dailyArea">
+<div id="singleArea" class="card todo-card">
+    <h2 id="singleTitle">ToDo</h2>
+    <div id="singleList"></div>
+
+</div>
+
+<div id="dailyArea"  class="card daily-card">
     <h2>毎日のタスク</h2>
     <div id="dailyList"></div>
 </div>
@@ -262,7 +298,10 @@ function deleteDaily(id){
 }
 
 function render(){
-
+    const singleTitle =
+    document.getElementById("singleTitle");
+    const inputArea =
+    document.getElementById("inputArea");
     const viewDate = targetDate.value;
     const isToday = viewDate === todayStr();
 
@@ -280,7 +319,7 @@ function render(){
     let singleDisplay;
 
     if(isToday){
-
+        singleTitle.textContent = "ToDo";
         singleDisplay =
             db.singleTodos.filter(x=>
                 x.completeDate==="" ||
@@ -288,7 +327,7 @@ function render(){
             );
 
     }else{
-
+        singleTitle.textContent = "完了履歴";
         singleDisplay =
             db.singleTodos.filter(x=>
                 x.completeDate===viewDate
@@ -382,71 +421,74 @@ function render(){
     if(!isToday){
 
         dailyArea.classList.add("hidden");
+        inputArea.classList.add("hidden");
        
-    }
+    }else{
 
         
-    dailyArea.classList.remove("hidden");
+        dailyArea.classList.remove("hidden");
+        inputArea.classList.remove("hidden");
 
-    db.dailyTodos.forEach(item=>{
+        db.dailyTodos.forEach(item=>{
 
-        const row =
-            document.createElement("div");
+            const row =
+                document.createElement("div");
 
-        row.className="todo-row";
+            row.className="todo-row";
 
-        const left =
-            document.createElement("div");
+            const left =
+                document.createElement("div");
 
-        left.className="todo-left";
+            left.className="todo-left";
 
-        const chk =
-            document.createElement("input");
+            const chk =
+                document.createElement("input");
 
-        chk.type="checkbox";
+            chk.type="checkbox";
 
-        chk.checked =
-            item.completeDate===todayStr();
+            chk.checked =
+                item.completeDate===todayStr();
 
-        chk.addEventListener("change",()=>{
+            chk.addEventListener("change",()=>{
 
-            item.completeDate =
-                chk.checked
-                ? todayStr()
-                : "";
+                item.completeDate =
+                    chk.checked
+                    ? todayStr()
+                    : "";
 
-            saveData();
-            render();
+                saveData();
+                render();
+
+            });
+
+            const span =
+                document.createElement("span");
+
+            span.textContent=item.todo;
+
+            if(item.completeDate===todayStr()){
+                span.classList.add("completed");
+            }
+
+            left.appendChild(chk);
+            left.appendChild(span);
+
+            row.appendChild(left);
+
+            const del =
+                document.createElement("button");
+
+            del.textContent="削除";
+
+            del.onclick=
+                ()=>deleteDaily(item.id);
+
+            row.appendChild(del);
+
+            dailyList.appendChild(row);
 
         });
-
-        const span =
-            document.createElement("span");
-
-        span.textContent=item.todo;
-
-        if(item.completeDate===todayStr()){
-            span.classList.add("completed");
-        }
-
-        left.appendChild(chk);
-        left.appendChild(span);
-
-        row.appendChild(left);
-
-        const del =
-            document.createElement("button");
-
-        del.textContent="削除";
-
-        del.onclick=
-            ()=>deleteDaily(item.id);
-
-        row.appendChild(del);
-
-        dailyList.appendChild(row);
-
-    });
+    }
 
 // 今日ボタン活性制御
        const todayBtn =
@@ -460,9 +502,9 @@ function render(){
 
     nextDayBtn.disabled =
     targetDate.value === todayStr();
-
-
 }
+
+
 
 document.getElementById("clearOldBtn")
 .addEventListener("click",()=>{
