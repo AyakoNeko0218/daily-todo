@@ -3,284 +3,512 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>日付別TODO</title>
+<title>ToDo管理</title>
 
 <style>
-body {
-    font-family: sans-serif;
-    max-width: 700px;
-    margin: 20px auto;
-    padding: 0 12px;
+body{
+    font-family:sans-serif;
+    margin:10px;
+    max-width:800px;
+    margin:auto;
 }
 
-.row {
-    display: flex;
-    gap: 8px;
-    margin: 8px 0;
-    flex-wrap: wrap;
+h2{
+    margin-top:25px;
 }
 
-input[type=text] {
-    flex: 1;
-    padding: 8px;
+.header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
 }
 
-button {
-    padding: 8px 12px;
+input[type="date"]{
+    font-size:16px;
 }
 
-.task {
-    padding: 8px 0;
-    border-bottom: 1px solid #ddd;
+#todoInput{
+    width:100%;
+    padding:10px;
+    font-size:16px;
+    box-sizing:border-box;
 }
 
-.done {
-    text-decoration: line-through;
-    opacity: 0.5;
+.todo-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px;
+    border-bottom:1px solid #ddd;
 }
 
-.small {
-    font-size: 0.9em;
-    color: #666;
+.todo-left{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1;
 }
+
+.completed{
+    text-decoration:line-through;
+    color:gray;
+}
+
+button{
+    padding:6px 10px;
+}
+
+.footer-buttons{
+    margin-top:30px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.hidden{
+    display:none;
+}
+
+.old-date{
+    color:#888;
+    font-size:0.9em;
+}
+
 </style>
 </head>
 
 <body>
 
-<h2>日付別TODO</h2>
+<div class="header">
+    <button id="prevDayBtn">◀</button>
 
-<div class="row">
-    <button id="prev">←</button>
-    <input type="date" id="date">
-    <button id="next">→</button>
+    <input type="date" id="targetDate">
+
+    <button id="nextDayBtn">▶</button>
+
+    <button id="todayBtn">今日</button>
+
 </div>
 
-<h3>タスク追加</h3>
+<br>
 
-<div class="row">
-    <input type="text" id="taskName" placeholder="タスク名">
+<label>
+    <input type="checkbox" id="dailyFlg">
+    毎日
+</label>
 
-    <select id="taskType">
-        <option value="single">単発</option>
-        <option value="repeat">繰り返し</option>
-    </select>
+<br><br>
 
-    <button id="addBtn">追加</button>
+<input
+    type="text"
+    id="todoInput"
+    placeholder="ToDo入力（Enterで追加）"
+>
+
+<div id="singleArea">
+    <h2>ToDo</h2>
+    <div id="singleList"></div>
 </div>
 
-<h3>TODO</h3>
+<div id="dailyArea">
+    <h2>毎日のタスク</h2>
+    <div id="dailyList"></div>
+</div>
 
-<div id="tasks"></div>
+<div class="footer-buttons">
+    <button id="clearOldBtn">データクリア</button>
+    <button id="clearAllBtn">全データクリア</button>
+</div>
 
 <script>
 
-const STORAGE_KEY = "daily_todo_v1";
+const STORAGE_KEY = "todo_app_data_v1";
 
-function loadData() {
-    return JSON.parse(
-        localStorage.getItem(STORAGE_KEY) || "{}"
-    );
-}
-
-function saveData(data) {
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(data)
-    );
-}
-
-function todayStr() {
+function todayStr(){
     return new Date().toISOString().slice(0,10);
 }
 
-function previousDate(dateStr) {
-    const d = new Date(dateStr);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0,10);
+function loadData(){
+    const data = localStorage.getItem(STORAGE_KEY);
+
+    if(data){
+        return JSON.parse(data);
+    }
+
+    return {
+        singleTodos:[],
+        dailyTodos:[]
+    };
 }
 
-function nextDate(dateStr) {
-    const d = new Date(dateStr);
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0,10);
+function saveData(){
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(db)
+    );
 }
 
-function ensureDay(dateStr) {
+let db = loadData();
 
-    const data = loadData();
+const targetDate = document.getElementById("targetDate");
+targetDate.value = todayStr();
+targetDate.max = todayStr();
 
-    if (data[dateStr]) {
+document.getElementById("prevDayBtn").addEventListener("click",()=>{
+    const d = new Date(targetDate.value);
+    d.setDate(d.getDate()-1);
+
+    targetDate.value = d.toISOString().slice(0,10);
+
+    render();
+});
+
+document.getElementById("nextDayBtn")
+.addEventListener("click",()=>{
+
+    const d = new Date(targetDate.value);
+
+    d.setDate(d.getDate()+1);
+
+    const nextDate =
+        d.toISOString().slice(0,10);
+
+    if(nextDate > todayStr()){
         return;
     }
 
-    const prev = previousDate(dateStr);
+    targetDate.value = nextDate;
 
-    if (!data[prev]) {
-        data[dateStr] = [];
-        saveData(data);
+    render();
+});
+
+targetDate.addEventListener("change",()=>{
+
+    if(targetDate.value > todayStr()){
+        targetDate.value = todayStr();
+    }
+
+    render();
+});
+
+document
+    .getElementById("todayBtn")
+    .addEventListener("click", () => {
+
+        targetDate.value = todayStr();
+
+        render();
+    });
+
+document.getElementById("todoInput")
+.addEventListener("keypress",(e)=>{
+
+    if(e.key !== "Enter"){
         return;
     }
 
-    const carryOver = data[prev]
-        .filter(t => t.type === "single" && !t.done)
-        .map(t => ({
-            id: crypto.randomUUID(),
-            title: t.title,
-            type: "single",
-            done: false
-        }));
+    const text = e.target.value.trim();
 
-    data[dateStr] = carryOver;
+    if(!text){
+        return;
+    }
 
-    saveData(data);
+    const isDaily =
+        document.getElementById("dailyFlg").checked;
+
+    if(isDaily){
+
+        db.dailyTodos.push({
+            id:crypto.randomUUID(),
+            todo:text,
+            completeDate:""
+        });
+
+    }else{
+
+        db.singleTodos.push({
+            id:crypto.randomUUID(),
+            createDate:todayStr(),
+            todo:text,
+            completeDate:""
+        });
+
+    }
+
+    saveData();
+
+    e.target.value="";
+
+    render();
+});
+
+function deleteSingle(id){
+
+    db.singleTodos =
+        db.singleTodos.filter(x=>x.id!==id);
+
+    saveData();
+    render();
 }
 
-function render() {
+function deleteDaily(id){
 
-    const dateStr =
-        document.getElementById("date").value;
+    db.dailyTodos =
+        db.dailyTodos.filter(x=>x.id!==id);
 
-    ensureDay(dateStr);
+    saveData();
+    render();
+}
 
-    const data = loadData();
+function render(){
 
-    const tasks =
-        data[dateStr] || [];
+    const viewDate = targetDate.value;
+    const isToday = viewDate === todayStr();
 
-    const container =
-        document.getElementById("tasks");
+    const singleList =
+        document.getElementById("singleList");
 
-    container.innerHTML = "";
+    const dailyList =
+        document.getElementById("dailyList");
 
-    tasks.forEach(task => {
+    singleList.innerHTML="";
+    dailyList.innerHTML="";
 
-        const div =
+    // 単発ToDo
+
+    let singleDisplay;
+
+    if(isToday){
+
+        singleDisplay =
+            db.singleTodos.filter(x=>
+                x.completeDate==="" ||
+                x.completeDate===todayStr()
+            );
+
+    }else{
+
+        singleDisplay =
+            db.singleTodos.filter(x=>
+                x.completeDate===viewDate
+            );
+
+    }
+
+    singleDisplay.forEach(item=>{
+
+        const row =
             document.createElement("div");
 
-        div.className = "task";
+        row.className="todo-row";
 
-        const label =
-            document.createElement("label");
+        const left =
+            document.createElement("div");
 
-        const cb =
+        left.className="todo-left";
+
+        const chk =
             document.createElement("input");
 
-        cb.type = "checkbox";
-        cb.checked = task.done;
+        chk.type="checkbox";
 
-        cb.onchange = () => {
+        const completed =
+            item.completeDate===viewDate ||
+            (isToday && item.completeDate===todayStr());
 
-            task.done = cb.checked;
+        chk.checked = completed;
 
-            saveData(data);
+        if(!isToday){
+            chk.disabled=true;
+        }
 
+        chk.addEventListener("change",()=>{
+
+            item.completeDate =
+                chk.checked ? todayStr() : "";
+
+            saveData();
             render();
-        };
+
+        });
 
         const span =
             document.createElement("span");
 
-        span.textContent =
-            " " + task.title + " ";
+        let text = item.todo;
 
-        if (task.done) {
-            span.className = "done";
+        if(
+            item.createDate &&
+            item.createDate < todayStr()
+        ){
+            text += ` (${item.createDate})`;
         }
 
-        const type =
+        span.textContent=text;
+
+        if(completed){
+            span.classList.add("completed");
+        }
+
+        left.appendChild(chk);
+        left.appendChild(span);
+
+        row.appendChild(left);
+
+        if(isToday){
+
+            const del =
+                document.createElement("button");
+
+            del.textContent="削除";
+
+            del.onclick=
+                ()=>deleteSingle(item.id);
+
+            row.appendChild(del);
+
+        }
+
+        singleList.appendChild(row);
+
+    });
+
+    // 毎日ToDo
+
+    const dailyArea =
+        document.getElementById("dailyArea");
+
+    if(!isToday){
+
+        dailyArea.classList.add("hidden");
+       
+    }
+
+        
+    dailyArea.classList.remove("hidden");
+
+    db.dailyTodos.forEach(item=>{
+
+        const row =
+            document.createElement("div");
+
+        row.className="todo-row";
+
+        const left =
+            document.createElement("div");
+
+        left.className="todo-left";
+
+        const chk =
+            document.createElement("input");
+
+        chk.type="checkbox";
+
+        chk.checked =
+            item.completeDate===todayStr();
+
+        chk.addEventListener("change",()=>{
+
+            item.completeDate =
+                chk.checked
+                ? todayStr()
+                : "";
+
+            saveData();
+            render();
+
+        });
+
+        const span =
             document.createElement("span");
 
-        type.className = "small";
+        span.textContent=item.todo;
 
-        type.textContent =
-            task.type === "single"
-            ? "(単発)"
-            : "(繰り返し)";
+        if(item.completeDate===todayStr()){
+            span.classList.add("completed");
+        }
 
-        label.appendChild(cb);
-        label.appendChild(span);
-        label.appendChild(type);
+        left.appendChild(chk);
+        left.appendChild(span);
 
-        div.appendChild(label);
+        row.appendChild(left);
 
-        container.appendChild(div);
+        const del =
+            document.createElement("button");
+
+        del.textContent="削除";
+
+        del.onclick=
+            ()=>deleteDaily(item.id);
+
+        row.appendChild(del);
+
+        dailyList.appendChild(row);
+
     });
+
+// 今日ボタン活性制御
+       const todayBtn =
+       document.getElementById("todayBtn");
+
+        todayBtn.disabled =
+        targetDate.value === todayStr();
+    
+    const nextDayBtn =
+    document.getElementById("nextDayBtn");
+
+    nextDayBtn.disabled =
+    targetDate.value === todayStr();
+
+
 }
 
-document.getElementById("addBtn").onclick = () => {
+document.getElementById("clearOldBtn")
+.addEventListener("click",()=>{
 
-    const name =
-        document.getElementById("taskName")
-        .value
-        .trim();
-
-    const type =
-        document.getElementById("taskType")
-        .value;
-
-    if (!name) {
+    if(
+        !confirm("1か月以上前に完了した単発ToDoを削除しますか？")
+    ){
         return;
     }
 
-    const dateStr =
-        document.getElementById("date").value;
+    const limit = new Date();
+    limit.setMonth(limit.getMonth()-1);
 
-    ensureDay(dateStr);
+    db.singleTodos =
+        db.singleTodos.filter(item=>{
 
-    const data = loadData();
+            if(!item.completeDate){
+                return true;
+            }
 
-    data[dateStr].push({
-        id: crypto.randomUUID(),
-        title: name,
-        type: type,
-        done: false
-    });
+            return new Date(item.completeDate) >= limit;
+        });
 
-    saveData(data);
-
-    document.getElementById("taskName").value = "";
-
+    saveData();
     render();
-};
+});
 
-document.getElementById("prev").onclick = () => {
+document.getElementById("clearAllBtn")
+.addEventListener("click",()=>{
 
-    const d =
-        document.getElementById("date");
+    if(
+        !confirm("全データを削除しますか？")
+    ){
+        return;
+    }
 
-    d.value =
-        previousDate(d.value);
+    db = {
+        singleTodos:[],
+        dailyTodos:[]
+    };
 
+    saveData();
     render();
-};
-
-document.getElementById("next").onclick = () => {
-
-    const d =
-        document.getElementById("date");
-
-    d.value =
-        nextDate(d.value);
-
-    render();
-};
-
-document.getElementById("date").value =
-    todayStr();
+});
 
 render();
-
-document.getElementById("taskName")
-    .addEventListener("keydown", function(event) {
-
-    if (event.key === "Enter") {
-
-        event.preventDefault();
-
-        document.getElementById("addBtn").click();
-    }
-});
 
 </script>
 

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日付別TODO</title>
+
+<style>
+body {
+    font-family: sans-serif;
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 0 12px;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+}
+
+input[type=text] {
+    flex: 1;
+    padding: 8px;
+}
+
+button {
+    padding: 8px 12px;
+}
+
+.task {
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.done {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+.small {
+    font-size: 0.9em;
+    color: #666;
+}
+</style>
+</head>
+
+<body>
+
+<h2>日付別TODO</h2>
+
+<div class="row">
+    <button id="prev">←</button>
+    <input type="date" id="date">
+    <button id="next">→</button>
+</div>
+
+<h3>タスク追加</h3>
+
+<div class="row">
+    <input type="text" id="taskName" placeholder="タスク名">
+
+    <select id="taskType">
+        <option value="single">単発</option>
+        <option value="repeat">繰り返し</option>
+    </select>
+
+    
+</div>
+
+<h3>TODO</h3>
+
+<div id="tasks"></div>
+
+<script>
+
+const STORAGE_KEY = "daily_todo_v1";
+
+function loadData() {
+    return JSON.parse(
+        localStorage.getItem(STORAGE_KEY) || "{}"
+    );
+}
+
+function saveData(data) {
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(data)
+    );
+}
+
+function todayStr() {
+    return new Date().toISOString().slice(0,10);
+}
+
+function previousDate(dateStr) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0,10);
+}
+
+function nextDate(dateStr) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0,10);
+}
+
+function ensureDay(dateStr) {
+
+    const data = loadData();
+
+    if (data[dateStr]) {
+        return;
+    }
+
+    const prev = previousDate(dateStr);
+
+    if (!data[prev]) {
+        data[dateStr] = [];
+        saveData(data);
+        return;
+    }
+
+    const carryOver = data[prev]
+        .filter(t => t.type === "single" && !t.done)
+        .map(t => ({
+            id: crypto.randomUUID(),
+            title: t.title,
+            type: "single",
+            done: false
+        }));
+
+    data[dateStr] = carryOver;
+
+    saveData(data);
+}
+
+function render() {
+
+    const dateStr =
+        document.getElementById("date").value;
+
+    ensureDay(dateStr);
+
+    const data = loadData();
+
+    const tasks =
+        data[dateStr] || [];
+
+    const container =
+        document.getElementById("tasks");
+
+    container.innerHTML = "";
+
+    tasks.forEach(task => {
+
+        const div =
+            document.createElement("div");
+
+        div.className = "task";
+
+        const label =
+            document.createElement("label");
+
+        const cb =
+            document.createElement("input");
+
+        cb.type = "checkbox";
+        cb.checked = task.done;
+
+        cb.onchange = () => {
+
+            task.done = cb.checked;
+
+            saveData(data);
+
+            render();
+        };
+
+        const span =
+            document.createElement("span");
+
+        span.textContent =
+            " " + task.title + " ";
+
+        if (task.done) {
+            span.className = "done";
+        }
+
+        const type =
+            document.createElement("span");
+
+        type.className = "small";
+
+        type.textContent =
+            task.type === "single"
+            ? "(単発)"
+            : "(繰り返し)";
+
+        label.appendChild(cb);
+        label.appendChild(span);
+        label.appendChild(type);
+
+        div.appendChild(label);
+
+        const deleteBtn =
+    document.createElement("button");
+
+deleteBtn.textContent = "削除";
+
+deleteBtn.onclick = () => {
+
+    const index =
+        tasks.findIndex(t => t.id === task.id);
+
+    if (index >= 0) {
+
+        tasks.splice(index, 1);
+
+        saveData(data);
+
+        render();
+    }
+};
+
+div.appendChild(deleteBtn);
+
+
+        container.appendChild(div);
+    });
+}
+
+function addTask() {
+
+    const name =
+        document.getElementById("taskName")
+        .value
+        .trim();
+
+    const type =
+        document.getElementById("taskType")
+        .value;
+
+    if (!name) {
+        return;
+    }
+
+    const dateStr =
+        document.getElementById("date").value;
+
+    ensureDay(dateStr);
+
+    const data = loadData();
+
+    data[dateStr].push({
+        id: crypto.randomUUID(),
+        title: name,
+        type: type,
+        done: false
+    });
+
+    saveData(data);
+
+    document.getElementById("taskName").value = "";
+
+    render();
+}
+
+document.getElementById("prev").onclick = () => {
+
+    const d =
+        document.getElementById("date");
+
+    d.value =
+        previousDate(d.value);
+
+    render();
+};
+
+document.getElementById("next").onclick = () => {
+
+    const d =
+        document.getElementById("date");
+
+    d.value =
+        nextDate(d.value);
+
+    render();
+};
+
+document.getElementById("date").value =
+    todayStr();
+
+render();
+
+document.getElementById("taskName")
+    .addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter") {
+
+        event.preventDefault();
+
+        addTask();
+    }
+});
+
+</script>
+
+</body>
+</html>
