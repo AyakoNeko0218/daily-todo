@@ -131,7 +131,17 @@ body{
         <input type="checkbox" id="dailyFlg">
         毎日
     </label>
+    
+    <label>
+        <input type="checkbox" id="scheduleFlg">
+        予定
+    </label>
 
+    <input
+        type="date"
+        id="dueDateInput"
+        disabled
+    >
     <br><br>
 
     <input
@@ -162,7 +172,13 @@ body{
 const STORAGE_KEY = "todo_app_data_v1";
 
 function todayStr(){
-    return new Date().toISOString().slice(0,10);
+    const now = new Date();
+
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${d}`;
 }
 
 function loadData(){
@@ -187,9 +203,22 @@ function saveData(){
 
 let db = loadData();
 
-const targetDate = document.getElementById("targetDate");
+const targetDate =
+    document.getElementById("targetDate");
+
+const dailyFlg =
+    document.getElementById("dailyFlg");
+
+const scheduleFlg =
+    document.getElementById("scheduleFlg");
+
+const dueDateInput =
+    document.getElementById("dueDateInput");
+
 targetDate.value = todayStr();
 targetDate.max = todayStr();
+
+dueDateInput.min = todayStr();
 
 document.getElementById("prevDayBtn").addEventListener("click",()=>{
     const d = new Date(targetDate.value);
@@ -549,7 +578,14 @@ document.getElementById("clearAllBtn")
     saveData();
     render();
 });
+window.addEventListener("pageshow", () => {
 
+    targetDate.value = todayStr();
+    targetDate.max = todayStr();
+
+    render();
+
+});
 render();
 
 </script>
