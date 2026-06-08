@@ -414,7 +414,10 @@ function render(){
             item.createDate &&
             item.createDate < todayStr()
         ){
-            text += ` (${item.createDate})`;
+            const d = new Date(item.createDate);
+
+            text +=
+                ` (${d.getMonth()+1}/${d.getDate()})`;
         }
 
         span.textContent=text;
