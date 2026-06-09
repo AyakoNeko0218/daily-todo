@@ -353,10 +353,10 @@ function render(){
     dailyList.innerHTML="";
 // でバック用
     alert(
-    db.singleTodos
-        .filter(x => x.completeDate)
-        .map(x =>
-            `${x.todo} : ${x.completeDate}`
+        "viewDate=" + viewDate + "\n\n" +
+        db.singleTodos
+              .map(x =>
+                `${x.todo} : ${x.completeDate}`
         )
         .join("\n")
 );
