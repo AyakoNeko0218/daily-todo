@@ -187,6 +187,18 @@ function todayStr(){
     return `${y}-${m}-${d}`;
 }
 
+function elapsedDays(dateStr) {
+
+    const today = new Date(todayStr());
+    const target = new Date(dateStr);
+
+    const diffMs = today - target;
+
+    return Math.floor(
+        diffMs / (1000 * 60 * 60 * 24)
+    );
+}
+
 function loadData(){
     const data = localStorage.getItem(STORAGE_KEY);
 
@@ -338,8 +350,8 @@ function render(){
     const inputArea =
     document.getElementById("inputArea");
     const viewDate = targetDate.value;
-    // でバック用
-    alert(viewDate);
+  
+
 
     const isToday = viewDate === todayStr();
 
@@ -352,6 +364,7 @@ function render(){
     singleList.innerHTML="";
     dailyList.innerHTML="";
 // でバック用
+/*
     alert(
         "viewDate=" + viewDate + "\n\n" +
         db.singleTodos
@@ -360,6 +373,7 @@ function render(){
         )
         .join("\n")
 );
+*/
 
     // 単発ToDo
 
@@ -425,13 +439,17 @@ function render(){
         let text = item.todo;
 
         if(
+            isToday &&
             item.createDate &&
             item.createDate < todayStr()
         ){
-            const d = new Date(item.createDate);
+        //    const d = new Date(item.createDate);
+            const days = elapsedDays(item.createDate);
+
 
             text +=
-                ` (${d.getMonth()+1}/${d.getDate()})`;
+                ` (+${days}日)`;
+        //        ` (${d.getMonth()+1}/${d.getDate()})`;
         }
 
         span.textContent=text;
