@@ -126,6 +126,8 @@ body{
 
     <button id="todayBtn">今日</button>
 
+    <button onclick="fixData()">データ修正</button>
+
 </div>
 
 <br>
@@ -136,16 +138,7 @@ body{
         毎日
     </label>
     
-    <label>
-        <input type="checkbox" id="scheduleFlg">
-        予定
-    </label>
 
-    <input
-        type="date"
-        id="dueDateInput"
-        disabled
-    >
     <br><br>
 
     <input
@@ -314,7 +307,8 @@ document.getElementById("todoInput")
             id:crypto.randomUUID(),
             createDate:todayStr(),
             todo:text,
-            completeDate:""
+            completeDate:"",
+            scheduleDate:""
         });
 
     }
@@ -325,7 +319,16 @@ document.getElementById("todoInput")
 
     render();
 });
+function fixData(){
+    db.singleTodos.forEach(item => {
+        if(!("scheduleDate" in item)){
+            item.scheduleDate = "";
+        }
+    });
 
+    saveData();
+    alert("データ補正完了");
+}
 function deleteSingle(id){
 
     db.singleTodos =
