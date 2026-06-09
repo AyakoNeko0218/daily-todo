@@ -223,13 +223,11 @@ const dailyFlg =
 const scheduleFlg =
     document.getElementById("scheduleFlg");
 
-const dueDateInput =
-    document.getElementById("dueDateInput");
 
 targetDate.value = todayStr();
 targetDate.max = todayStr();
 
-dueDateInput.min = todayStr();
+
 
 document.getElementById("prevDayBtn").addEventListener("click",()=>{
     const d = new Date(targetDate.value);
