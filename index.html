@@ -351,6 +351,15 @@ function render(){
 
     singleList.innerHTML="";
     dailyList.innerHTML="";
+// でバック用
+    alert(
+    db.singleTodos
+        .filter(x => x.completeDate)
+        .map(x =>
+            `${x.todo} : ${x.completeDate}`
+        )
+        .join("\n")
+);
 
     // 単発ToDo
 
