@@ -126,7 +126,7 @@ body{
 
     <button id="todayBtn">今日</button>
 
-    <button onclick="fixData()">データ修正</button>
+
 
 </div>
 
@@ -317,16 +317,7 @@ document.getElementById("todoInput")
 
     render();
 });
-function fixData(){
-    db.singleTodos.forEach(item => {
-        if(!("scheduleDate" in item)){
-            item.scheduleDate = "";
-        }
-    });
 
-    saveData();
-    alert("データ補正完了");
-}
 function deleteSingle(id){
 
     db.singleTodos =
