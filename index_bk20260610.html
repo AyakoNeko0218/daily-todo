@@ -9,7 +9,6 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
-//CSS（画面デザイン）
 <style>
 body{
     font-family:sans-serif;
@@ -112,7 +111,7 @@ body{
 }
 
 
-//画面作成（静的）
+
 </style>
 </head>
 
@@ -126,8 +125,6 @@ body{
     <button id="nextDayBtn">▶</button>
 
     <button id="todayBtn">今日</button>
-
-    <button onclick="fixOrder()">order補正</button>
 
 
 
@@ -167,13 +164,12 @@ body{
     <button id="clearAllBtn">全データクリア</button>
 </div>
 
-//ここからソース
 <div id="version">v1.00</div>
 
 <script>
 
 const STORAGE_KEY = "todo_app_data_v1";
-////関数
+
 function todayStr(){
     const now = new Date();
 
@@ -214,27 +210,6 @@ function saveData(){
         STORAGE_KEY,
         JSON.stringify(db)
     );
-}
-function fixData(){
-
-    db.singleTodos.forEach((item, i) => {
-
-        // 並び順
-        if(item.order == null){
-            item.order = i;
-        }
-
-        // 期日
-        if(item.dueDate == null){
-            item.dueDate = "";
-        }
-
-    });
-
-    saveData();
-    render();
-
-    alert("データ補正完了");
 }
 
 let db = loadData();
@@ -331,9 +306,7 @@ document.getElementById("todoInput")
             createDate:todayStr(),
             todo:text,
             completeDate:"",
-            scheduleDate:"",
-            dueDate: "",
-            order: db.singleTodos.length
+            scheduleDate:""
         });
 
     }
@@ -395,10 +368,7 @@ function render(){
 */
 
     // 単発ToDo
-    //// 並び変える
-        let list = [...db.singleTodos];
-        list.sort((a, b) => a.order - b.order);
-    //// 描写する
+
     let singleDisplay;
 
     if(isToday){
