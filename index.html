@@ -8,8 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-
-//CSS（画面デザイン）
+<!--画面描写（デザイン） -->
 <style>
 body{
     font-family:sans-serif;
@@ -111,8 +110,8 @@ body{
     box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
+<!--画面作成（静的） -->
 
-//画面作成（静的）
 </style>
 </head>
 
@@ -127,7 +126,7 @@ body{
 
     <button id="todayBtn">今日</button>
 
-    <button onclick="fixData()">補正</button>
+
 
 
 
@@ -215,27 +214,7 @@ function saveData(){
         JSON.stringify(db)
     );
 }
-function fixData(){
 
-    db.singleTodos.forEach((item, i) => {
-
-        // 並び順
-        if(item.order == null){
-            item.order = i;
-        }
-
-        // 期日
-        if(item.dueDate == null){
-            item.dueDate = "";
-        }
-
-    });
-
-    saveData();
-    render();
-
-    alert("データ補正完了");
-}
 
 let db = loadData();
 
