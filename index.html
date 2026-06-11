@@ -166,11 +166,10 @@ body{
     <button id="clearAllBtn">全データクリア</button>
 </div>
 
-//ここからソース
 <div id="version">v1.00</div>
 
 <script>
-
+//ここからソース
 const STORAGE_KEY = "todo_app_data_v1";
 ////関数
 function todayStr(){
@@ -403,6 +402,32 @@ function render(){
             document.createElement("div");
 
         row.className="todo-row";
+        //ドラッグ可能にする
+        row.draggable = true;
+
+        row.addEventListener("dragstart", (e) => {
+
+            e.dataTransfer.setData(
+                "text/plain",
+                item.id
+            );
+        });
+
+        row.addEventListener("dragover", (e) => {
+            e.preventDefault();
+        });
+
+        row.addEventListener("drop", (e) => {
+
+            e.preventDefault();
+
+            const fromId =
+                e.dataTransfer.getData("text/plain");
+
+            const toId = item.id;
+
+            reorder(fromId, toId);
+        });
 
         const left =
             document.createElement("div");
@@ -573,7 +598,33 @@ function render(){
     targetDate.value === todayStr();
 }
 
+function reorder(fromId, toId){
 
+    const list = db.singleTodos;
+
+    const fromIndex =
+        list.findIndex(x => x.id === fromId);
+
+    const toIndex =
+        list.findIndex(x => x.id === toId);
+
+    if(fromIndex === -1 || toIndex === -1){
+        return;
+    }
+
+    const [moved] =
+        list.splice(fromIndex, 1);
+
+    list.splice(toIndex, 0, moved);
+
+    // ★順番を保存（重要）
+    list.forEach((item, i) => {
+        item.order = i;
+    });
+
+    saveData();
+    render();
+}
 
 document.getElementById("clearOldBtn")
 .addEventListener("click",()=>{
