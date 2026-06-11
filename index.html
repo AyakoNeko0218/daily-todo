@@ -54,6 +54,26 @@ input[type="date"]{
     flex:1;
 }
 
+.todo-row.dragging {
+    opacity: 0.4;
+}
+
+.todo-row.drag-over-top {
+    border-top: 2px solid #4a90e2;
+}
+
+.todo-row.drag-over-bottom {
+    border-bottom: 2px solid #4a90e2;
+}
+
+.drag-over-top {
+    border-top: 2px solid #4a90e2;
+}
+
+.drag-over-bottom {
+    border-bottom: 2px solid #4a90e2;
+}
+
 .completed{
     text-decoration:line-through;
     color:gray;
@@ -411,15 +431,39 @@ function render(){
                 "text/plain",
                 item.id
             );
+            row.classList.add("dragging");
+        });
+
+        row.addEventListener("dragend", () => {
+            row.classList.remove("dragging");
         });
 
         row.addEventListener("dragover", (e) => {
             e.preventDefault();
+
+            const rect = row.getBoundingClientRect();
+            const offsetY = e.clientY - rect.top;
+
+            const isTop = offsetY < rect.height / 2;
+
+            row.classList.remove("drag-over-top", "drag-over-bottom");
+
+            if (isTop) {
+                row.classList.add("drag-over-top");
+            } else {
+                row.classList.add("drag-over-bottom");
+            }
+        });
+
+        row.addEventListener("dragleave", () => {
+            row.classList.remove("drag-over-top", "drag-over-bottom");
         });
 
         row.addEventListener("drop", (e) => {
 
             e.preventDefault();
+
+            row.classList.remove("drag-over-top", "drag-over-bottom");
 
             const fromId =
                 e.dataTransfer.getData("text/plain");
