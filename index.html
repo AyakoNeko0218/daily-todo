@@ -398,25 +398,15 @@ function render(){
 
     singleList.innerHTML="";
     dailyList.innerHTML="";
-// でバック用
-/*
-    alert(
-        "viewDate=" + viewDate + "\n\n" +
-        db.singleTodos
-              .map(x =>
-                `${x.todo} : ${x.completeDate}`
-        )
-        .join("\n")
-);
-*/
+
 
     // 単発ToDo
     //// 並び変える
         let list = [...db.singleTodos];
         list.sort((a, b) => a.order - b.order);
-    //// 描写する
+    
     let singleDisplay;
-
+    //日付による区分
     if(isToday){
         singleTitle.textContent = "ToDo";
         singleDisplay =
@@ -433,7 +423,7 @@ function render(){
             );
 
     }
-
+    //// データの中身を描写する
     singleDisplay.forEach(item=>{
 
         const row =
@@ -553,8 +543,66 @@ function render(){
 
         if(isToday){
             
-        
-            
+            //予定日ボタンを追加
+            const scheduleBtn =
+                document.createElement("button");
+
+            scheduleBtn.className = "icon-btn";
+
+            const scheduleImg =
+                document.createElement("img");
+
+            scheduleImg.src = "calendar-blue.svg";
+            scheduleImg.alt = "予定日";
+
+            scheduleBtn.appendChild(scheduleImg);
+
+            scheduleBtn.onclick = ()=>{
+
+                const newDate = prompt(
+                    "予定日(YYYY-MM-DD)",
+                    item.scheduleDate || ""
+                );
+
+                if(newDate === null){
+                    return;
+                }
+
+                item.scheduleDate = newDate.trim();
+
+                saveData();
+                render();
+            };
+            //期日ボタンを追加
+            const dueBtn =
+                document.createElement("button");
+
+            dueBtn.className = "icon-btn";
+
+            const dueImg =
+                document.createElement("img");
+
+            dueImg.src = "calendar-red.svg";
+            dueImg.alt = "期日";
+
+            dueBtn.appendChild(dueImg);
+
+            dueBtn.onclick = ()=>{
+
+                const newDate = prompt(
+                    "期日(YYYY-MM-DD)",
+                    item.dueDate || ""
+                );
+
+                if(newDate === null){
+                    return;
+                }
+
+                item.dueDate = newDate.trim();
+
+                saveData();
+                render();
+            };
 
             //削除ボタン
             const del =
@@ -575,7 +623,10 @@ function render(){
 
             del.onclick=
                 ()=>deleteSingle(item.id);
-
+            
+            //ボタンを並べる
+            row.appendChild(scheduleBtn);
+            row.appendChild(dueBtn);
             row.appendChild(del);
 
         }
