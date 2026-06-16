@@ -260,7 +260,19 @@ function elapsedDays(dateStr) {
         diffMs / (1000 * 60 * 60 * 24)
     );
 }
+//予定日の表示方法の変更====================
+function formatSchedule(dateStr){
 
+    const d = new Date(dateStr);
+
+    const week = ["日","月","火","水","木","金","土"];
+
+    const w = week[d.getDay()];
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+
+    return `${m}/${day}(${w})`;
+}
 //ローカルストレージからToDoデータを読み込む==========================
 function loadData(){
     const data = localStorage.getItem(STORAGE_KEY);
@@ -289,9 +301,16 @@ function renderSchedulePage(){
 
     scheduleList.innerHTML = "";
 
+
+    //日付で並び替え    
     const list =
-        db.singleTodos
-        .filter(x => x.scheduleDate);
+    db.singleTodos
+    .filter(x => x.scheduleDate)
+    .sort((a,b)=>
+        a.scheduleDate.localeCompare(
+            b.scheduleDate
+        )
+    );
 
     list.forEach(item=>{
 
@@ -303,11 +322,59 @@ function renderSchedulePage(){
         document.createElement("span");
 
         span.textContent =
-            `${item.scheduleDate} ${item.todo}`;
+            `${formatSchedule(item.scheduleDate)} ${item.todo}`;
 
         row.appendChild(span);
 
+        // 予定日ボタン
+        const scheduleBtn =
+            document.createElement("button");
+
+        scheduleBtn.className = "icon-btn";
+
+        const scheduleImg =
+            document.createElement("img");
+
+        scheduleImg.src = "calendar-blue.svg";
+        scheduleImg.alt = "予定日";
+
+        scheduleBtn.appendChild(scheduleImg);
+
+        scheduleBtn.onclick = () => {
+            const input = document.createElement("input");
+            input.type = "date";
+            input.value = item.scheduleDate || "";
+
+            document.body.appendChild(input);
+
+            input.style.position = "fixed";
+            input.style.top = "10px";
+                input.style.left = "10px";
+                input.style.opacity = "0";
+
+                input.onchange = () => {
+                    item.scheduleDate = input.value;
+                    saveData();
+                    renderSchedulePage(); // ←これに統一
+                    input.remove();
+                };
+
+                input.onblur = () => {
+                    input.remove();
+                };
+
+                input.focus();
+
+                // 保険（Chrome用）
+                setTimeout(() => {
+                    input.showPicker?.();
+                }, 0);
+            };
+
+
+        row.appendChild(scheduleBtn); // ←これ必要
         scheduleList.appendChild(row);
+        
     });
 }
 
@@ -551,8 +618,15 @@ function render(){
         singleTitle.textContent = "ToDo";
         singleDisplay =
             db.singleTodos.filter(x=>
-                x.completeDate==="" ||
-                x.completeDate===todayStr()
+                (
+                    x.completeDate==="" ||
+                    x.completeDate===todayStr()
+                )
+                &&
+                (
+                    !x.scheduleDate ||
+                    x.scheduleDate <= todayStr()
+                )
             );
 
     }else{
@@ -719,23 +793,28 @@ function render(){
             scheduleImg.alt = "予定日";
 
             scheduleBtn.appendChild(scheduleImg);
+            scheduleBtn.onclick = () => {
+                const input = document.createElement("input");
+                input.type = "date";
 
-            scheduleBtn.onclick = ()=>{
+                input.value = item.scheduleDate || "";
 
-                const newDate = prompt(
-                    "予定日(YYYY-MM-DD)",
-                    item.scheduleDate || ""
-                );
+                input.onchange = () => {
+                    item.scheduleDate = input.value;
+                    saveData();
+                    render();
+                };
 
-                if(newDate === null){
-                    return;
-                }
+                input.style.position = "absolute";
+                input.style.opacity = 0;
 
-                item.scheduleDate = newDate.trim();
+                document.body.appendChild(input);
 
-                saveData();
-                render();
+                input.showPicker?.() || input.click();
             };
+                        
+
+            
             //期日ボタンを追加
             const dueBtn =
                 document.createElement("button");
