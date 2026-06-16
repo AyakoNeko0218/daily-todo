@@ -155,63 +155,82 @@ body{
     box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
+.schedule-card{
+    background:#EAF6FF;
+    border-radius:16px;
+    padding:15px;
+    margin-top:10px;
+}
+
 <!--画面作成（静的） -->
 
 </style>
 </head>
 
 <body>
+<!--メイン画面 -------------------------------->
+<div id="mainPage">
+    <div class="header">
+        <button id="prevDayBtn">◀</button>
 
-<div class="header">
-    <button id="prevDayBtn">◀</button>
+        <input type="date" id="targetDate">
 
-    <input type="date" id="targetDate">
+        <button id="nextDayBtn">▶</button>
 
-    <button id="nextDayBtn">▶</button>
+        <button id="todayBtn">今日</button>
 
-    <button id="todayBtn">今日</button>
+        <button id="scheduleBtn">予定一覧</button>
 
+    </div>
 
+    <br>
 
+    <div id="inputArea">
+        <label>
+            <input type="checkbox" id="dailyFlg">
+            毎日
+        </label>
+        
 
+        <br>
 
+        <input
+            type="text"
+            id="todoInput"
+            placeholder="ToDo入力（Enterで追加）"
+        >
+    </div>
+
+    <div id="singleArea" class="card todo-card">
+        <h2 id="singleTitle">ToDo</h2>
+        <div id="singleList"></div>
+
+    </div>
+
+    <div id="dailyArea"  class="card daily-card">
+        <h2>毎日のタスク</h2>
+        <div id="dailyList"></div>
+    </div>
+
+    <div class="footer-buttons">
+        <button id="clearOldBtn">データクリア</button>
+        <button id="clearAllBtn">全データクリア</button>
+    </div>
+
+    <div id="version">v1.00</div>
 </div>
 
-<br>
+<!--予定一覧画面 -------------------------------->
+<div id="schedulePage" class="hidden">
 
-<div id="inputArea">
-    <label>
-        <input type="checkbox" id="dailyFlg">
-        毎日
-    </label>
-    
+    <h2>予定一覧</h2>
 
-    <br><br>
+    <button id="backBtn">戻る</button>
 
-    <input
-        type="text"
-        id="todoInput"
-        placeholder="ToDo入力（Enterで追加）"
-    >
+    <div id="scheduleList" class="schedule-card"></div>
 </div>
 
-<div id="singleArea" class="card todo-card">
-    <h2 id="singleTitle">ToDo</h2>
-    <div id="singleList"></div>
 
-</div>
-
-<div id="dailyArea"  class="card daily-card">
-    <h2>毎日のタスク</h2>
-    <div id="dailyList"></div>
-</div>
-
-<div class="footer-buttons">
-    <button id="clearOldBtn">データクリア</button>
-    <button id="clearAllBtn">全データクリア</button>
-</div>
-
-<div id="version">v1.00</div>
 
 <script>
 //ここからソース
@@ -263,6 +282,61 @@ function saveData(){
     );
 }
 
+function renderSchedulePage(){
+
+    const scheduleList =
+        document.getElementById("scheduleList");
+
+    scheduleList.innerHTML = "";
+
+    const list =
+        db.singleTodos
+        .filter(x => x.scheduleDate);
+
+    list.forEach(item=>{
+
+        const row =
+            document.createElement("div");
+        row.className = "todo-row";
+
+        const span =
+        document.createElement("span");
+
+        span.textContent =
+            `${item.scheduleDate} ${item.todo}`;
+
+        row.appendChild(span);
+
+        scheduleList.appendChild(row);
+    });
+}
+
+function deleteSingle(id){
+   
+   if(!confirm(`${db.singleTodos.find(x=>x.id===id)?.todo} を削除しますか？`))
+   {
+        return;
+    }
+
+    db.singleTodos =
+        db.singleTodos.filter(x=>x.id!==id);
+
+    saveData();
+    render();
+}
+
+function deleteDaily(id){
+    if(!confirm(`${db.dailyTodos.find(x=>x.id===id)?.todo} を削除しますか？`))
+   {
+        return;
+    }
+    db.dailyTodos =
+        db.dailyTodos.filter(x=>x.id!==id);
+
+    saveData();
+    render();
+}
+
 //データと画面をつなぐ初期設定ブロック==============
 let db = loadData();
 
@@ -305,6 +379,36 @@ document.getElementById("nextDayBtn")
 
     render();
 });
+
+//追加中メモ
+document.getElementById("scheduleBtn")
+.addEventListener("click",()=>{
+
+    renderSchedulePage();
+
+    document
+        .getElementById("mainPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("schedulePage")
+        .classList.remove("hidden");
+
+});
+
+document.getElementById("backBtn")
+.addEventListener("click",()=>{
+
+    document
+        .getElementById("mainPage")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("schedulePage")
+        .classList.add("hidden");
+
+});
+//追加ここまで
 
 targetDate.addEventListener("change",()=>{
 
@@ -371,31 +475,49 @@ document.getElementById("todoInput")
     render();
 });
 
-function deleteSingle(id){
-   
-   if(!confirm(`${db.singleTodos.find(x=>x.id===id)?.todo} を削除しますか？`))
-   {
+document.getElementById("clearOldBtn")
+.addEventListener("click",()=>{
+
+    if(
+        !confirm("1か月以上前に完了した単発ToDoを削除しますか？")
+    ){
         return;
     }
+
+    const limit = new Date();
+    limit.setMonth(limit.getMonth()-1);
 
     db.singleTodos =
-        db.singleTodos.filter(x=>x.id!==id);
+        db.singleTodos.filter(item=>{
+
+            if(!item.completeDate){
+                return true;
+            }
+
+            return new Date(item.completeDate) >= limit;
+        });
 
     saveData();
     render();
-}
+});
 
-function deleteDaily(id){
-    if(!confirm(`${db.dailyTodos.find(x=>x.id===id)?.todo} を削除しますか？`))
-   {
+document.getElementById("clearAllBtn")
+.addEventListener("click",()=>{
+
+    if(
+        !confirm("全データを削除しますか？")
+    ){
         return;
     }
-    db.dailyTodos =
-        db.dailyTodos.filter(x=>x.id!==id);
+
+    db = {
+        singleTodos:[],
+        dailyTodos:[]
+    };
 
     saveData();
     render();
-}
+});
 
 function render(){
     const singleTitle =
@@ -865,49 +987,7 @@ function reorder(fromId, toId){
     render();
 }
 
-document.getElementById("clearOldBtn")
-.addEventListener("click",()=>{
 
-    if(
-        !confirm("1か月以上前に完了した単発ToDoを削除しますか？")
-    ){
-        return;
-    }
-
-    const limit = new Date();
-    limit.setMonth(limit.getMonth()-1);
-
-    db.singleTodos =
-        db.singleTodos.filter(item=>{
-
-            if(!item.completeDate){
-                return true;
-            }
-
-            return new Date(item.completeDate) >= limit;
-        });
-
-    saveData();
-    render();
-});
-
-document.getElementById("clearAllBtn")
-.addEventListener("click",()=>{
-
-    if(
-        !confirm("全データを削除しますか？")
-    ){
-        return;
-    }
-
-    db = {
-        singleTodos:[],
-        dailyTodos:[]
-    };
-
-    saveData();
-    render();
-});
 window.addEventListener("pageshow", () => {
 
     targetDate.value = todayStr();
