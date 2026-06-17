@@ -394,7 +394,15 @@ function renderSchedulePage(){
             document.createElement("button");
 
         editBtn.className = "icon-btn";
-        editBtn.textContent = "✏️";
+        const editImg =
+            document.createElement("img");
+
+            editImg.src = "edit.svg";
+            editImg.alt = "編集";
+            editImg.width = 20;
+            editImg.height = 20;
+
+            editBtn.appendChild(editImg);
 
         editBtn.onclick = () => {
 
@@ -740,7 +748,7 @@ function render(){
                 document.createElement("img");
 
             editImg.src = "edit.svg";
-            editImg.alt = "📝";
+            editImg.alt = "編集";
             editImg.width = 20;
             editImg.height = 20;
 
