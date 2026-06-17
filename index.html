@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ToDo管理＿Ver.1.0</title>
+<title>ToDo管理＿Ver.1.1</title>
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -236,12 +236,45 @@ body{
 
     <div id="scheduleList" class="schedule-card"></div>
 </div>
+<!--タスク編集画面 -------------------------------->
+<div id="editPage" class="hidden">
 
+    <h2>タスク編集</h2>
+
+    <div>
+        <div>タスク名</div>
+        <input type="text" id="editTodo">
+    </div>
+
+    <br>
+
+    <div>
+        <div>予定日</div>
+        <input type="date" id="editScheduleDate">
+    </div>
+
+    <br>
+
+    <div>
+        <div>期日</div>
+        <input type="date" id="editDueDate">
+    </div>
+
+    <br>
+
+    <button id="editOkBtn">OK</button>
+    <button id="editCancelBtn">キャンセル</button>
+
+</div>
+</body>
 
 
 <script>
 //ここからソース
 const STORAGE_KEY = "todo_app_data_v1";
+let editingItem = null;
+let editFrom = "main";
+
 ////関数
 //今日の日付を返す関数=========================================
 function todayStr(){
@@ -323,6 +356,7 @@ function saveData(){
     );
 }
 
+//予定一覧の画面描写
 function renderSchedulePage(){
 
     const scheduleList =
@@ -356,50 +390,42 @@ function renderSchedulePage(){
         row.appendChild(span);
 
         // 予定日ボタン
-        const scheduleBtn =
-        document.createElement("button");
+        const editBtn =
+            document.createElement("button");
 
-         scheduleBtn.className = "icon-btn";
+        editBtn.className = "icon-btn";
+        editBtn.textContent = "✏️";
 
-        const img =
-            document.createElement("img");
+        editBtn.onclick = () => {
 
-        img.src = "calendar-blue.svg";
-        img.alt = "予定日";
+            editFrom = "schedule";
+            editingItem = item;
 
-        scheduleBtn.appendChild(img);
+            document
+                .getElementById("schedulePage")
+                .classList.add("hidden");
 
-        scheduleBtn.onclick = () => {
+            document
+                .getElementById("editPage")
+                .classList.remove("hidden");
 
-            const input =
-                document.createElement("input");
+            document
+                .getElementById("editTodo")
+                .value = item.todo;
 
-            input.type = "date";
-            input.value = item.scheduleDate || "";
-            input.min = todayStr();
+            document
+                .getElementById("editScheduleDate")
+                .value = item.scheduleDate || "";
 
-            input.onchange = () => {
-
-                item.scheduleDate = input.value;
-
-                saveData();
-
-                renderSchedulePage();
-
-                alert(
-                    `「${item.todo}」の予定日を ${formatSchedule(input.value)} に変更しました`
-                );
-            };
-
-            input.style.position = "fixed";
-            input.style.left = "-9999px";
-
-            document.body.appendChild(input);
-
-            input.showPicker?.() || input.click();
+            document
+                .getElementById("editDueDate")
+                .value = item.dueDate || "";
         };
 
-        row.appendChild(scheduleBtn);
+        row.appendChild(editBtn);
+
+
+
         scheduleList.appendChild(row);
         
     });
@@ -431,188 +457,36 @@ function deleteDaily(id){
     render();
 }
 
-//データと画面をつなぐ初期設定ブロック==============
-let db = loadData();
 
-const targetDate =
-    document.getElementById("targetDate");
+function reorder(fromId, toId){
 
-const dailyFlg =
-    document.getElementById("dailyFlg");
+    const list = db.singleTodos;
 
+    const fromIndex =
+        list.findIndex(x => x.id === fromId);
 
-targetDate.value = todayStr();
-targetDate.max = todayStr();
+    const toIndex =
+        list.findIndex(x => x.id === toId);
 
-
-//HTMLページ全体（DOM）を操作するブロック==============
-document.getElementById("prevDayBtn").addEventListener("click",()=>{
-    const d = new Date(targetDate.value);
-    d.setDate(d.getDate()-1);
-
-    targetDate.value = d.toISOString().slice(0,10);
-
-    render();
-});
-
-document.getElementById("nextDayBtn")
-.addEventListener("click",()=>{
-
-    const d = new Date(targetDate.value);
-
-    d.setDate(d.getDate()+1);
-
-    const nextDate =
-        d.toISOString().slice(0,10);
-
-    if(nextDate > todayStr()){
+    if(fromIndex === -1 || toIndex === -1){
         return;
     }
 
-    targetDate.value = nextDate;
+    const [moved] =
+        list.splice(fromIndex, 1);
 
-    render();
-});
+    list.splice(toIndex, 0, moved);
 
-//追加中メモ
-document.getElementById("scheduleBtn")
-.addEventListener("click",()=>{
-
-    renderSchedulePage();
-
-    document
-        .getElementById("mainPage")
-        .classList.add("hidden");
-
-    document
-        .getElementById("schedulePage")
-        .classList.remove("hidden");
-
-});
-
-document.getElementById("backBtn")
-.addEventListener("click",()=>{
-
-    document
-        .getElementById("mainPage")
-        .classList.remove("hidden");
-
-    document
-        .getElementById("schedulePage")
-        .classList.add("hidden");
-
-});
-//追加ここまで
-
-targetDate.addEventListener("change",()=>{
-
-    if(targetDate.value > todayStr()){
-        targetDate.value = todayStr();
-    }
-
-    render();
-});
-
-document
-    .getElementById("todayBtn")
-    .addEventListener("click", () => {
-
-        targetDate.value = todayStr();
-
-        render();
+    // ★順番を保存（重要）
+    list.forEach((item, i) => {
+        item.order = i;
     });
 
-document.getElementById("todoInput")
-.addEventListener("keypress",(e)=>{
-
-    if(e.key !== "Enter"){
-        return;
-    }
-
-    const text = e.target.value.trim();
-
-    if(!text){
-        return;
-    }
-
-    const isDaily =
-        document.getElementById("dailyFlg").checked;
-
-    if(isDaily){
-
-        db.dailyTodos.push({
-            id:crypto.randomUUID(),
-            todo:text,
-            completeDate:"",
-            scheduleTime:""
-        });
-
-    }else{
-
-        db.singleTodos.push({
-            id:crypto.randomUUID(),
-            createDate:todayStr(),
-            todo:text,
-            completeDate:"",
-            scheduleDate:"",
-            dueDate: "",
-            progressFlag:0,
-            order: db.singleTodos.length
-        });
-
-    }
-
-    saveData();
-
-    e.target.value="";
-
-    render();
-});
-
-document.getElementById("clearOldBtn")
-.addEventListener("click",()=>{
-
-    if(
-        !confirm("1か月以上前に完了した単発ToDoを削除しますか？")
-    ){
-        return;
-    }
-
-    const limit = new Date();
-    limit.setMonth(limit.getMonth()-1);
-
-    db.singleTodos =
-        db.singleTodos.filter(item=>{
-
-            if(!item.completeDate){
-                return true;
-            }
-
-            return new Date(item.completeDate) >= limit;
-        });
-
     saveData();
     render();
-});
+}
 
-document.getElementById("clearAllBtn")
-.addEventListener("click",()=>{
-
-    if(
-        !confirm("全データを削除しますか？")
-    ){
-        return;
-    }
-
-    db = {
-        singleTodos:[],
-        dailyTodos:[]
-    };
-
-    saveData();
-    render();
-});
-
+//メイン画面描写
 function render(){
     const singleTitle =
     document.getElementById("singleTitle");
@@ -756,29 +630,77 @@ function render(){
             document.createElement("span");
 
         let text = item.todo;
+//追加ここから
+        const textSpan =
+            document.createElement("span");
 
-        if(
+        textSpan.textContent = text;
+        left.appendChild(chk);
+        left.appendChild(textSpan);
+        if(item.dueDate){
+
+            const diff =
+                Math.floor(
+                    (new Date(item.dueDate) - new Date(todayStr()))
+                    / (1000 * 60 * 60 * 24)
+                );
+
+            const dueSpan =
+                document.createElement("span");
+
+            if(diff > 0){
+
+                dueSpan.textContent =
+                    ` 〆${formatSchedule(item.dueDate)}：残${diff}日`;
+
+                dueSpan.style.color = "#2196F3";
+
+            }else if(diff < 0){
+
+                dueSpan.textContent =
+                    ` 〆${formatSchedule(item.dueDate)}：超${Math.abs(diff)}日`;
+
+                dueSpan.style.color = "red";
+
+            }else{
+
+                dueSpan.textContent =
+                    ` 〆${formatSchedule(item.dueDate)}：今日`;
+
+                dueSpan.style.color = "#ff9800";
+            }
+
+            dueSpan.style.fontWeight = "bold";
+
+            left.appendChild(dueSpan);
+
+        }else if(
             isToday &&
             item.createDate &&
             item.createDate < todayStr()
         ){
-        //    const d = new Date(item.createDate);
+
             const days = elapsedDays(item.createDate);
 
+            const ageSpan =
+                document.createElement("span");
 
-            text +=
-                ` (+${days}日)`;
-        //        ` (${d.getMonth()+1}/${d.getDate()})`;
+            ageSpan.textContent =
+                ` (${days}日目)`;
+
+            ageSpan.style.color = "#666";
+
+            left.appendChild(ageSpan);
         }
+        
 
-        span.textContent=text;
+        
+
+        
 
         if(completed){
-            span.classList.add("completed");
+            textSpan.classList.add("completed");
         }
-
-        left.appendChild(chk);
-        left.appendChild(span);
 
         row.appendChild(left);
 
@@ -807,83 +729,49 @@ function render(){
                 render();
             };
             
-            //予定日ボタンを追加
-            //予定日ボタン（カレンダー）
-            const scheduleBtn =
-            document.createElement("button");
-
-            scheduleBtn.className = "icon-btn";
-
-            const scheduleImg =
-                document.createElement("img");
-
-            scheduleImg.src = "calendar-blue.svg";
-            scheduleImg.alt = "予定日";
-
-            scheduleBtn.appendChild(scheduleImg);
-
-            scheduleBtn.onclick = () => {
-
-                const input =
-                    document.createElement("input");
-
-                input.type = "date";
-                input.value = item.scheduleDate || "";
-                input.min = todayStr();
-
-                input.onchange = () => {
-
-                    item.scheduleDate = input.value;
-
-                    saveData();
-                    render();
-
-                    alert(
-                        `「${item.todo}」の予定日を ${formatSchedule(input.value)} に設定しました`
-                    );
-                };
-
-                input.style.position = "fixed";
-                input.style.left = "-9999px";
-
-                document.body.appendChild(input);
-
-                input.showPicker?.() || input.click();
-            };
-
-            
-
-            
-            //期日ボタンを追加
-            const dueBtn =
+            //編集ボタンを追加
+            //編集ボタン
+            const editBtn =
                 document.createElement("button");
 
-            dueBtn.className = "icon-btn";
+            editBtn.className = "icon-btn";
 
-            const dueImg =
+            const editImg =
                 document.createElement("img");
 
-            dueImg.src = "calendar-red.svg";
-            dueImg.alt = "期日";
+            editImg.src = "edit.svg";
+            editImg.alt = "📝";
+            editImg.width = 20;
+            editImg.height = 20;
 
-            dueBtn.appendChild(dueImg);
+            editBtn.appendChild(editImg);
 
-            dueBtn.onclick = ()=>{
+            editBtn.onclick = () => {
+                
+                editFrom = "main";
+                editingItem = item;
 
-                const newDate = prompt(
-                    "期日(YYYY-MM-DD)",
-                    item.dueDate || ""
-                );
+                document
+                    .getElementById("mainPage")
+                    .classList.add("hidden");
 
-                if(newDate === null){
-                    return;
-                }
+                document
+                    .getElementById("editPage")
+                    .classList.remove("hidden");
 
-                item.dueDate = newDate.trim();
+                document
+                    .getElementById("editTodo")
+                    .value = item.todo;
 
-                saveData();
-                render();
+                document
+                    .getElementById("editScheduleDate")
+                    .value = item.scheduleDate || "";
+
+                document
+                    .getElementById("editDueDate")
+                    .value = item.dueDate || "";
             };
+            
 
             //削除ボタン
             const del =
@@ -907,8 +795,7 @@ function render(){
             
             //ボタンを並べる
             row.appendChild(progressBtn);
-            row.appendChild(scheduleBtn);
-            row.appendChild(dueBtn);
+            row.appendChild(editBtn);
             row.appendChild(del);
 
         }
@@ -1077,34 +964,264 @@ function render(){
     targetDate.value === todayStr();
 }
 
-function reorder(fromId, toId){
 
-    const list = db.singleTodos;
 
-    const fromIndex =
-        list.findIndex(x => x.id === fromId);
 
-    const toIndex =
-        list.findIndex(x => x.id === toId);
 
-    if(fromIndex === -1 || toIndex === -1){
+//データと画面をつなぐ初期設定ブロック==============
+let db = loadData();
+
+const targetDate =
+    document.getElementById("targetDate");
+
+const dailyFlg =
+    document.getElementById("dailyFlg");
+
+
+targetDate.value = todayStr();
+targetDate.max = todayStr();
+
+
+//HTMLページ全体（DOM）を操作するブロック==============
+document.getElementById("prevDayBtn").addEventListener("click",()=>{
+    const d = new Date(targetDate.value);
+    d.setDate(d.getDate()-1);
+
+    targetDate.value = d.toISOString().slice(0,10);
+
+    render();
+});
+
+document.getElementById("nextDayBtn")
+.addEventListener("click",()=>{
+
+    const d = new Date(targetDate.value);
+
+    d.setDate(d.getDate()+1);
+
+    const nextDate =
+        d.toISOString().slice(0,10);
+
+    if(nextDate > todayStr()){
         return;
     }
 
-    const [moved] =
-        list.splice(fromIndex, 1);
+    targetDate.value = nextDate;
 
-    list.splice(toIndex, 0, moved);
+    render();
+});
 
-    // ★順番を保存（重要）
-    list.forEach((item, i) => {
-        item.order = i;
+
+
+targetDate.addEventListener("change",()=>{
+
+    if(targetDate.value > todayStr()){
+        targetDate.value = todayStr();
+    }
+
+    render();
+});
+//追加中メモ
+document.getElementById("scheduleBtn")
+.addEventListener("click",()=>{
+
+    renderSchedulePage();
+
+    document
+        .getElementById("mainPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("schedulePage")
+        .classList.remove("hidden");
+
+});
+
+document.getElementById("backBtn")
+.addEventListener("click",()=>{
+
+    document
+        .getElementById("mainPage")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("schedulePage")
+        .classList.add("hidden");
+
+});
+//追加ここまで
+document
+    .getElementById("todayBtn")
+    .addEventListener("click", () => {
+
+        targetDate.value = todayStr();
+
+        render();
     });
+
+document.getElementById("todoInput")
+.addEventListener("keypress",(e)=>{
+
+    if(e.key !== "Enter"){
+        return;
+    }
+
+    const text = e.target.value.trim();
+
+    if(!text){
+        return;
+    }
+
+    const isDaily =
+        document.getElementById("dailyFlg").checked;
+
+    if(isDaily){
+
+        db.dailyTodos.push({
+            id:crypto.randomUUID(),
+            todo:text,
+            completeDate:"",
+            scheduleTime:""
+        });
+
+    }else{
+
+        db.singleTodos.push({
+            id:crypto.randomUUID(),
+            createDate:todayStr(),
+            todo:text,
+            completeDate:"",
+            scheduleDate:"",
+            dueDate: "",
+            progressFlag:0,
+            order: db.singleTodos.length
+        });
+
+    }
+
+    saveData();
+
+    e.target.value="";
+
+    render();
+});
+
+document.getElementById("clearOldBtn")
+.addEventListener("click",()=>{
+
+    if(
+        !confirm("1か月以上前に完了した単発ToDoを削除しますか？")
+    ){
+        return;
+    }
+
+    const limit = new Date();
+    limit.setMonth(limit.getMonth()-1);
+
+    db.singleTodos =
+        db.singleTodos.filter(item=>{
+
+            if(!item.completeDate){
+                return true;
+            }
+
+            return new Date(item.completeDate) >= limit;
+        });
 
     saveData();
     render();
-}
+});
 
+document.getElementById("clearAllBtn")
+.addEventListener("click",()=>{
+
+    if(
+        !confirm("全データを削除しますか？")
+    ){
+        return;
+    }
+
+    db = {
+        singleTodos:[],
+        dailyTodos:[]
+    };
+
+    saveData();
+    render();
+});
+
+//編集画面OKボタン
+document.getElementById("editOkBtn")
+.addEventListener("click", () => {
+
+    if(!editingItem){
+        return;
+    }
+
+    editingItem.todo =
+        document.getElementById("editTodo").value;
+
+    editingItem.scheduleDate =
+        document.getElementById("editScheduleDate").value;
+
+    editingItem.dueDate =
+        document.getElementById("editDueDate").value;
+
+    saveData();
+
+    editingItem = null;
+
+    document
+        .getElementById("editPage")
+        .classList.add("hidden");
+
+
+    render();
+
+    if(editFrom === "schedule"){
+
+        renderSchedulePage();
+
+        document
+            .getElementById("schedulePage")
+            .classList.remove("hidden");
+
+    }else{
+
+        document
+            .getElementById("mainPage")
+            .classList.remove("hidden");
+    }
+
+});
+
+//編集画面キャンセルボタン
+document.getElementById("editCancelBtn")
+.addEventListener("click", () => {
+
+    editingItem = null;
+
+    document
+        .getElementById("editPage")
+        .classList.add("hidden");
+
+
+
+    if(editFrom === "schedule"){
+
+        renderSchedulePage();
+
+        document
+            .getElementById("schedulePage")
+            .classList.remove("hidden");
+
+    }else{
+
+        document
+            .getElementById("mainPage")
+            .classList.remove("hidden");
+    }
+});
 
 window.addEventListener("pageshow", () => {
 
