@@ -168,7 +168,11 @@ body{
     padding:15px;
     margin-top:10px;
 }
-
+#showAllDailyArea{
+    display:block;
+    text-align:right;
+    margin-bottom:12px;
+}
 <!--画面作成（静的） -->
 
 </style>
@@ -188,24 +192,37 @@ body{
 
         <button id="scheduleBtn">予定一覧</button>
 
+        
+
     </div>
 
     <br>
 
     <div id="inputArea">
+
+        <div style="margin-bottom:15px;">
+            <button id="addSingleBtn">
+                ＋単発
+            </button>
+
+            <button id="addDailyBtn">
+                ＋毎日
+            </button>
+        </div>
+        
         <label>
             <input type="checkbox" id="dailyFlg">
             毎日
         </label>
-        
 
-        <br>
 
         <input
             type="text"
             id="todoInput"
             placeholder="ToDo入力（Enterで追加）"
         >
+        
+        
     </div>
 
     <div id="singleArea" class="card todo-card">
@@ -216,6 +233,10 @@ body{
 
     <div id="dailyArea"  class="card daily-card">
         <h2>毎日のタスク</h2>
+        <label id="showAllDailyArea">
+            <input type="checkbox" id="showAllDaily">
+            全曜日表示
+        </label>
         <div id="dailyList"></div>
     </div>
 
@@ -224,7 +245,7 @@ body{
         <button id="clearAllBtn">全データクリア</button>
     </div>
 
-    <div id="version">v1.00</div>
+    <div id="version">v1.10</div>
 </div>
 
 <!--予定一覧画面 -------------------------------->
@@ -266,6 +287,42 @@ body{
     <button id="editCancelBtn">キャンセル</button>
 
 </div>
+
+<!--毎日タスク編集画面 -------------------------------->
+<div id="dailyEditPage" class="hidden">
+    <h2>毎日タスク編集</h2>
+
+    <div>
+        <div>タスク名</div>
+        <input type="text" id="dailyEditTodo">
+    </div>
+
+    <div>
+        <div>開始時間</div>
+        <input type="time" id="dailyEditTime">
+    </div>
+
+    <div>
+        <div>曜日</div>
+
+        
+        <label><input type="checkbox" class="weekChk" value="0">日</label>
+        <label><input type="checkbox" class="weekChk" value="1">月</label>
+        <label><input type="checkbox" class="weekChk" value="2">火</label>
+        <label><input type="checkbox" class="weekChk" value="3">水</label>
+        <label><input type="checkbox" class="weekChk" value="4">木</label>
+        <label><input type="checkbox" class="weekChk" value="5">金</label>
+        <label><input type="checkbox" class="weekChk" value="6">土</label>
+</div>
+
+<button id="dailyEditOkBtn">OK</button>
+<button id="dailyEditCancelBtn">キャンセル</button>
+    
+
+
+
+</div>
+
 </body>
 
 
@@ -274,6 +331,8 @@ body{
 const STORAGE_KEY = "todo_app_data_v1";
 let editingItem = null;
 let editFrom = "main";
+let dailyEditingItem = null;
+let editMode = "";
 
 ////関数
 //今日の日付を返す関数=========================================
@@ -828,27 +887,27 @@ function render(){
         dailyArea.classList.remove("hidden");
         inputArea.classList.remove("hidden");
 
+        const todayWeek = new Date().getDay();
+
         const dailyDisplay =
             [...db.dailyTodos]
-            .sort((a, b) => {
+            .filter(item =>
+                !item.weekDays ||
+                item.weekDays.length === 0 ||
+                item.weekDays.includes(todayWeek)
+            )
+            .sort((a,b)=>{
 
                 const ta = a.scheduleTime || "";
                 const tb = b.scheduleTime || "";
 
-                if(!ta && !tb){
-                    return 0;
-                }
-
-                if(!ta){
-                    return 1;
-                }
-
-                if(!tb){
-                    return -1;
-                }
+                if(!ta && !tb) return 0;
+                if(!ta) return 1;
+                if(!tb) return -1;
 
                 return ta.localeCompare(tb);
             });
+  
 
         dailyDisplay.forEach(item=>{
 
@@ -899,39 +958,58 @@ function render(){
             left.appendChild(span);
 
             row.appendChild(left);
-            //時計ボタン
-            const timeBtn =
+
+            //編集ボタン
+            const editBtn =
                 document.createElement("button");
 
-            timeBtn.className = "icon-btn";
+            editBtn.className = "icon-btn";
 
-                const timeImg =
-                    document.createElement("img");
+            const editImg =
+                document.createElement("img");
 
-                timeImg.src = "time.svg";
-                timeImg.alt = "時刻設定";
-                timeImg.width = 20;
-                timeImg.height = 20;
+            editImg.src = "edit.svg";
+            editImg.alt = "編集";
+            editImg.width = 20;
+            editImg.height = 20;
 
-                timeBtn.appendChild(timeImg);
+            editBtn.appendChild(editImg);
 
-            timeBtn.onclick = ()=>{
+            editBtn.onclick = () => {
 
-                const newTime = prompt(
-                    "予定時刻(HH:MM)",
-                    item.scheduleTime || ""
-                );
+                editFrom = "main";
+                dailyEditingItem = item;
 
-                if(newTime === null){
-                    return;
-                }
+                document
+                    .getElementById("mainPage")
+                    .classList.add("hidden");
 
-                item.scheduleTime = newTime.trim();
+                document
+                    .getElementById("dailyEditPage")
+                    .classList.remove("hidden");
 
-                saveData();
-                render();
+                document
+                    .getElementById("dailyEditTodo")
+                    .value = item.todo;
+
+                document
+                    .getElementById("dailyEditTime")
+                    .value = item.scheduleTime || "";
+                document
+                    .querySelectorAll(".weekChk")
+                    .forEach(chk => {
+
+                        chk.checked =
+                            item.weekDays &&
+                            item.weekDays.includes(
+                                Number(chk.value)
+                             );
+                        });
+
+
             };
-            row.appendChild(timeBtn);
+            
+            row.appendChild(editBtn);
 
             //削除ボタン
             const del =
@@ -1089,7 +1167,8 @@ document.getElementById("todoInput")
             id:crypto.randomUUID(),
             todo:text,
             completeDate:"",
-            scheduleTime:""
+            scheduleTime:"",
+            weekDays:[]
         });
 
     }else{
@@ -1229,6 +1308,100 @@ document.getElementById("editCancelBtn")
             .getElementById("mainPage")
             .classList.remove("hidden");
     }
+});
+
+//毎日OKボタン
+document
+.getElementById("dailyEditOkBtn")
+.addEventListener("click",()=>{
+
+    const weekDays =
+        [...document.querySelectorAll(".weekChk")]
+        .filter(chk=>chk.checked)
+        .map(chk=>Number(chk.value));
+
+    if(dailyEditingItem){
+
+        dailyEditingItem.todo =
+            document.getElementById("dailyEditTodo").value;
+
+        dailyEditingItem.scheduleTime =
+            document.getElementById("dailyEditTime").value;
+
+        dailyEditingItem.weekDays =
+            weekDays;
+
+    }
+
+    saveData();
+
+    document
+        .getElementById("dailyEditPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("mainPage")
+        .classList.remove("hidden");
+
+    render();
+
+});
+
+//単発タスク追加ボタン
+document.getElementById("addSingleBtn")
+.addEventListener("click",()=>{
+
+    editMode = "newSingle";
+    editingItem = null;
+
+    document
+        .getElementById("editTodo")
+        .value = "";
+
+    document
+        .getElementById("editScheduleDate")
+        .value = "";
+
+    document
+        .getElementById("editDueDate")
+        .value = "";
+
+    document
+        .getElementById("mainPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("editPage")
+        .classList.remove("hidden");
+
+});
+//毎日タスク追加ボタン
+document.getElementById("addDailyBtn")
+.addEventListener("click",()=>{
+
+    editMode = "newDaily";
+    dailyEditingItem = null;
+
+    document
+        .getElementById("dailyEditTodo")
+        .value = "";
+
+    document
+        .getElementById("dailyEditTime")
+        .value = "";
+
+    document
+        .querySelectorAll(".weekChk")
+        .forEach(chk=>chk.checked=false);
+
+    document
+        .getElementById("mainPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("dailyEditPage")
+        .classList.remove("hidden");
+
 });
 
 window.addEventListener("pageshow", () => {
