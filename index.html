@@ -427,7 +427,10 @@ function renderSchedulePage(){
     //日付で並び替え    
     const list =
     db.singleTodos
-    .filter(x => x.scheduleDate)
+    .filter(x =>
+        x.scheduleDate &&
+        x.scheduleDate > todayStr()
+    )
     .sort((a,b)=>
         a.scheduleDate.localeCompare(
             b.scheduleDate
@@ -718,21 +721,21 @@ function render(){
             if(diff > 0){
 
                 dueSpan.textContent =
-                    ` 〆${formatSchedule(item.dueDate)}：残${diff}日`;
+                    ` 〆残${diff}日`;
 
                 dueSpan.style.color = "#2196F3";
 
             }else if(diff < 0){
 
                 dueSpan.textContent =
-                    ` 〆${formatSchedule(item.dueDate)}：超${Math.abs(diff)}日`;
+                    ` 〆超${Math.abs(diff)}日`;
 
                 dueSpan.style.color = "red";
 
             }else{
 
                 dueSpan.textContent =
-                    ` 〆${formatSchedule(item.dueDate)}：今日`;
+                    ` 〆今日`;
 
                 dueSpan.style.color = "#ff9800";
             }
@@ -1240,7 +1243,38 @@ document.getElementById("clearAllBtn")
 //編集画面OKボタン
 document.getElementById("editOkBtn")
 .addEventListener("click", () => {
+    //新規作成
+    if(editMode === "newSingle"){
 
+        db.singleTodos.push({
+            id: crypto.randomUUID(),
+            createDate: todayStr(),
+            todo: document.getElementById("editTodo").value,
+            completeDate:"",
+            scheduleDate:
+                document.getElementById("editScheduleDate").value,
+            dueDate:
+                document.getElementById("editDueDate").value,
+            progressFlag:0,
+            order: db.singleTodos.length
+        });
+
+        saveData();
+
+        document
+            .getElementById("editPage")
+            .classList.add("hidden");
+
+        document
+            .getElementById("mainPage")
+            .classList.remove("hidden");
+
+        render();
+        return;
+    }
+
+     
+    //更新処理
     if(!editingItem){
         return;
     }
@@ -1319,6 +1353,25 @@ document
         [...document.querySelectorAll(".weekChk")]
         .filter(chk=>chk.checked)
         .map(chk=>Number(chk.value));
+
+    // 新規追加
+    if(editMode === "newDaily"){
+
+        db.dailyTodos.push({
+            id: crypto.randomUUID(),
+            todo:
+                document.getElementById("dailyEditTodo").value,
+            completeDate:"",
+            scheduleTime:
+                document.getElementById("dailyEditTime").value,
+            weekDays
+        });
+        
+        editMode = "";
+   
+    }
+
+    // 既存編集
 
     if(dailyEditingItem){
 
