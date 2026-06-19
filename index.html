@@ -743,7 +743,18 @@ function render(){
             dueSpan.style.fontWeight = "bold";
 
             left.appendChild(dueSpan);
+        
+        }else if(item.scheduleDate){
 
+            const scheduleSpan =
+                document.createElement("span");
+
+            scheduleSpan.textContent =
+                ` ${formatSchedule(item.scheduleDate)}予定`;
+
+            scheduleSpan.style.color = "#4a90e2";
+
+            left.appendChild(scheduleSpan);
         }else if(
             isToday &&
             item.createDate &&
@@ -1243,13 +1254,22 @@ document.getElementById("clearAllBtn")
 //編集画面OKボタン
 document.getElementById("editOkBtn")
 .addEventListener("click", () => {
+    const todo =
+        document.getElementById("editTodo")
+        .value
+        .trim();
+
+        if(!todo){
+            alert("タスク名を入力してください");
+            return;
+        }
     //新規作成
     if(editMode === "newSingle"){
 
         db.singleTodos.push({
             id: crypto.randomUUID(),
             createDate: todayStr(),
-            todo: document.getElementById("editTodo").value,
+            todo: todo,
             completeDate:"",
             scheduleDate:
                 document.getElementById("editScheduleDate").value,
@@ -1279,8 +1299,7 @@ document.getElementById("editOkBtn")
         return;
     }
 
-    editingItem.todo =
-        document.getElementById("editTodo").value;
+    editingItem.todo =todo;
 
     editingItem.scheduleDate =
         document.getElementById("editScheduleDate").value;
@@ -1353,20 +1372,29 @@ document
         [...document.querySelectorAll(".weekChk")]
         .filter(chk=>chk.checked)
         .map(chk=>Number(chk.value));
+    
+    const todo =
+        document.getElementById("dailyEditTodo")
+        .value
+        .trim();
+
+    if(!todo){
+        alert("タスク名を入力してください");
+        return;
+    }
 
     // 新規追加
     if(editMode === "newDaily"){
 
         db.dailyTodos.push({
             id: crypto.randomUUID(),
-            todo:
-                document.getElementById("dailyEditTodo").value,
+            todo: todo,
             completeDate:"",
             scheduleTime:
                 document.getElementById("dailyEditTime").value,
             weekDays
         });
-        
+
         editMode = "";
    
     }
@@ -1375,8 +1403,7 @@ document
 
     if(dailyEditingItem){
 
-        dailyEditingItem.todo =
-            document.getElementById("dailyEditTodo").value;
+        dailyEditingItem.todo = todo;
 
         dailyEditingItem.scheduleTime =
             document.getElementById("dailyEditTime").value;
@@ -1397,6 +1424,23 @@ document
         .classList.remove("hidden");
 
     render();
+
+});
+
+//毎日編集画面キャンセルボタン
+document.getElementById("dailyEditCancelBtn")
+.addEventListener("click",()=>{
+
+    dailyEditingItem = null;
+    editMode = "";
+
+    document
+        .getElementById("dailyEditPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("mainPage")
+        .classList.remove("hidden");
 
 });
 
