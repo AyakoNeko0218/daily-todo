@@ -451,7 +451,7 @@ function renderSchedulePage(){
 
         row.appendChild(span);
 
-        // 予定日ボタン
+        // 編集ボタン
         const editBtn =
             document.createElement("button");
 
@@ -493,7 +493,40 @@ function renderSchedulePage(){
         };
 
         row.appendChild(editBtn);
+        //削除ボタン
+        const del =
+            document.createElement("button");
 
+        del.className = "icon-btn";
+
+        const img =
+            document.createElement("img");
+
+        img.src = "trash.svg";
+        img.alt = "削除";
+        img.width = 20;
+        img.height = 20;
+
+        del.appendChild(img);
+
+        del.onclick = ()=>{
+
+            if(
+                !confirm(`${item.todo} を削除しますか？`)
+            ){
+                return;
+            }
+
+            db.singleTodos =
+                db.singleTodos.filter(
+                    x => x.id !== item.id
+                );
+
+            saveData();
+
+            renderSchedulePage();
+        };        
+        row.appendChild(del);
 
 
         scheduleList.appendChild(row);
