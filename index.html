@@ -746,20 +746,34 @@ function render(){
         
         }else if(item.scheduleDate){
 
-            const scheduleSpan =
-                document.createElement("span");
+            const diff =
+            Math.floor(
+                (new Date(todayStr()) -
+                new Date(item.scheduleDate))
+                / (1000 * 60 * 60 * 24)
+            );
 
-            scheduleSpan.textContent =
-                ` ${formatSchedule(item.scheduleDate)}予定`;
+            if(diff === 0){
 
-            scheduleSpan.style.color = "#4a90e2";
+                span.style.color = "#4a90e2";
+                span.style.fontWeight = "bold";
 
-            left.appendChild(scheduleSpan);
-        }else if(
-            isToday &&
-            item.createDate &&
-            item.createDate < todayStr()
-        ){
+            }else if(diff > 0){
+
+                const planSpan =
+                    document.createElement("span");
+
+                planSpan.textContent =
+                    ` (予定+${diff}日)`;
+
+                planSpan.style.color = "red";
+
+                left.appendChild(planSpan);
+            }else if(
+                isToday &&
+                item.createDate &&
+                item.createDate < todayStr()
+            ){
 
             const days = elapsedDays(item.createDate);
 
@@ -772,6 +786,7 @@ function render(){
             ageSpan.style.color = "#666";
 
             left.appendChild(ageSpan);
+            }    
         }
         
 
