@@ -449,7 +449,7 @@ function renderSchedulePage(){
         span.textContent =
             `${formatSchedule(item.scheduleDate)} ${item.todo}`;
 
-        row.appendChild(span);
+        
 
         // 編集ボタン
         const editBtn =
@@ -492,7 +492,7 @@ function renderSchedulePage(){
                 .value = item.dueDate || "";
         };
 
-        row.appendChild(editBtn);
+        
         //削除ボタン
         const del =
             document.createElement("button");
@@ -525,8 +525,16 @@ function renderSchedulePage(){
             saveData();
 
             renderSchedulePage();
-        };        
-        row.appendChild(del);
+        };
+        row.appendChild(span);
+        
+        const btnArea =
+            document.createElement("div");
+        btnArea.className = "btn-area";
+
+        btnArea.appendChild(editBtn);
+        btnArea.appendChild(del);
+        row.appendChild(btnArea);
 
 
         scheduleList.appendChild(row);
@@ -788,8 +796,8 @@ function render(){
 
             if(diff === 0){
 
-                span.style.color = "#4a90e2";
-                span.style.fontWeight = "bold";
+                textSpan..style.color = "#4a90e2";
+                textSpan..style.fontWeight = "bold";
 
             }else if(diff > 0){
 
