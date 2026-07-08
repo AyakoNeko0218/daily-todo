@@ -168,10 +168,37 @@ body{
     padding:15px;
     margin-top:10px;
 }
+.history-date{
+    margin-top:20px;
+    margin-bottom:8px;
+    border-bottom:1px solid #ccc;
+    font-size:16px;
+}
 #showAllDailyArea{
     display:block;
     text-align:right;
     margin-bottom:12px;
+}
+#historyKeyword{
+    width:100%;
+    padding:8px;
+    margin-bottom:12px;
+    box-sizing:border-box;
+}
+#historySearchArea{
+    display:flex;
+    gap:6px;
+    margin-bottom:12px;
+}
+
+#historyKeyword{
+    flex:1;
+    padding:8px;
+    box-sizing:border-box;
+}
+
+#historyClearBtn{
+    width:40px;
 }
 <!--画面作成（静的） -->
 
@@ -192,6 +219,8 @@ body{
 
         <button id="scheduleBtn">予定一覧</button>
 
+        <button id="historyBtn">履歴一覧</button>
+
         
 
     </div>
@@ -210,16 +239,11 @@ body{
             </button>
         </div>
         
-        <label>
-            <input type="checkbox" id="dailyFlg">
-            毎日
-        </label>
-
 
         <input
             type="text"
             id="todoInput"
-            placeholder="ToDo入力（Enterで追加）"
+            placeholder="単発タスク簡易入力（Enterで追加）"
         >
         
         
@@ -255,8 +279,56 @@ body{
 
     <button id="backBtn">戻る</button>
 
+    <hr>
+
+    <button id="weekViewBtn">週間</button>
+    <button id="monthViewBtn">月間</button>
+
+    <button id="prevScheduleBtn">◀</button>
+
+    <span id="schedulePeriod"></span>
+
+    <button id="nextScheduleBtn">▶</button>
+
+    <br><br>
+
     <div id="scheduleList" class="schedule-card"></div>
 </div>
+
+<div id="historyPage" class="hidden">
+
+    <h2>履歴一覧</h2>
+
+    <button id="historyBackBtn">戻る</button>
+
+    <hr>
+    <div id="historySearchArea">
+
+        <input
+            type="text"
+            id="historyKeyword"
+            placeholder="キーワード検索"
+        >
+
+        <button id="historyClearBtn">✕</button>
+
+    </div>
+
+    <button id="historyWeekBtn">週間</button>
+    <button id="historyMonthBtn">月間</button>
+
+    <button id="historyPrevBtn">◀</button>
+
+    <span id="historyPeriod"></span>
+
+    <button id="historyNextBtn">▶</button>
+
+    <br><br>
+
+    <div id="historyList" class="schedule-card"></div>
+
+</div>
+
 <!--タスク編集画面 -------------------------------->
 <div id="editPage" class="hidden">
 
@@ -333,6 +405,10 @@ let editingItem = null;
 let editFrom = "main";
 let dailyEditingItem = null;
 let editMode = "";
+let scheduleViewMode = "week";   // week / month
+let schedulePage = 0;            // 0=今週(今月)
+let historyViewMode = "week";
+let historyPage = 0;
 
 ////関数
 //今日の日付を返す関数=========================================
@@ -372,6 +448,53 @@ function formatSchedule(dateStr){
 
     return `${m}/${day}(${w})`;
 }
+
+//日付範囲取得関数====================
+function getViewRange(viewMode,page){
+
+    const today = new Date(todayStr());
+
+    let start;
+    let end;
+
+    if(viewMode==="week"){
+
+        start = new Date(today);
+
+        const weekDay =
+            today.getDay() === 0
+                ? 6
+                : today.getDay() - 1;
+
+        start = new Date(today);
+
+        start.setDate(
+            today.getDate()
+            - weekDay
+            + page * 7
+        );
+
+        end = new Date(start);
+        end.setDate(start.getDate()+6);
+
+    }else{
+
+        start = new Date(
+            today.getFullYear(),
+            today.getMonth()+page
+        );
+
+        end = new Date(
+            start.getFullYear(),
+            start.getMonth()+1,
+            0
+        );
+    }
+
+    return {start,end};
+
+}
+
 //ローカルストレージからToDoデータを読み込む==========================
 function loadData(){
     const data = localStorage.getItem(STORAGE_KEY);
@@ -425,12 +548,42 @@ function renderSchedulePage(){
 
 
     //日付で並び替え    
+    const {start,end}=getViewRange(
+            scheduleViewMode,
+            schedulePage
+        );
+
+    const period =
+        document.getElementById("schedulePeriod");
+
+    if(scheduleViewMode==="week"){
+
+        period.textContent =
+            `${formatSchedule(start.toISOString().slice(0,10))}
+    ～ ${formatSchedule(end.toISOString().slice(0,10))}`;
+
+    }else{
+
+        period.textContent =
+            `${start.getFullYear()}年${start.getMonth()+1}月`;
+    }
+
     const list =
     db.singleTodos
-    .filter(x =>
-        x.scheduleDate &&
-        x.scheduleDate > todayStr()
-    )
+
+    .filter(item=>{
+
+        if(!item.scheduleDate) return false;
+
+        if(item.scheduleDate<=todayStr()) return false;
+
+        const d =
+            new Date(item.scheduleDate);
+
+        return d>=start && d<=end;
+
+    })
+
     .sort((a,b)=>
         a.scheduleDate.localeCompare(
             b.scheduleDate
@@ -541,6 +694,134 @@ function renderSchedulePage(){
         
     });
 }
+
+//履歴一覧の画面描写
+function renderHistoryPage(){
+    const keyword =
+        document
+            .getElementById("historyKeyword")
+            .value
+            .trim()
+            .toLowerCase();
+    //日付で並び替え    
+    const {start,end}=getViewRange(
+            historyViewMode,
+            historyPage
+        );
+    const list =
+    db.singleTodos
+
+    .filter(item=>{
+
+        if(!item.completeDate){
+            return false;
+        }
+
+        if(keyword){
+
+            return item.todo
+                .toLowerCase()
+                .includes(keyword);
+
+        }
+
+        const d =
+            new Date(item.completeDate);
+
+        return d>=start && d<=end;
+
+    })
+    .sort((a,b)=>
+        b.completeDate.localeCompare(
+            a.completeDate
+        )
+    );
+    const historyList =
+    document.getElementById("historyList");
+
+    historyList.innerHTML = "";
+
+
+
+
+    const period =
+    document.getElementById("historyPeriod");
+
+    if(keyword){
+
+        period.textContent =
+            `検索結果（${list.length}件）`;
+
+        }else if(historyViewMode==="week"){
+
+        period.textContent =
+            `${formatSchedule(start.toISOString().slice(0,10))}
+    ～ ${formatSchedule(end.toISOString().slice(0,10))}`;
+
+    }else{
+
+        period.textContent =
+            `${start.getFullYear()}年${start.getMonth()+1}月`;
+    }
+    
+    
+
+    
+
+    let lastDate = "";
+    list.forEach(item=>{
+        if(item.completeDate !== lastDate){
+
+            const title =
+                document.createElement("h3");
+            title.className = "history-date";
+
+            title.textContent =
+                formatSchedule(item.completeDate);
+
+            historyList.appendChild(title);
+
+            lastDate = item.completeDate;
+
+        }
+
+        const row =
+            document.createElement("div");
+        row.className = "todo-row";
+
+        const span =
+        document.createElement("span");
+
+        span.textContent =
+            `☑ ${item.todo}`;
+
+            
+        
+
+        
+        row.appendChild(span);
+        
+        const btnArea =
+            document.createElement("div");
+        btnArea.className = "btn-area";
+
+
+        row.appendChild(btnArea);
+
+
+        historyList.appendChild(row);
+        document.getElementById("historyClearBtn").style.display =
+        keyword ? "block" : "none";
+        const searching = keyword !== "";
+
+        document.getElementById("historyWeekBtn").disabled = searching;
+        document.getElementById("historyMonthBtn").disabled = searching;
+        document.getElementById("historyPrevBtn").disabled = searching;
+        document.getElementById("historyNextBtn").disabled = searching;
+        
+    });
+}
+
 
 function deleteSingle(id){
    
@@ -1130,8 +1411,7 @@ let db = loadData();
 const targetDate =
     document.getElementById("targetDate");
 
-const dailyFlg =
-    document.getElementById("dailyFlg");
+
 
 
 targetDate.value = todayStr();
@@ -1205,7 +1485,79 @@ document.getElementById("backBtn")
         .classList.add("hidden");
 
 });
+
+document.getElementById("weekViewBtn")
+.onclick=()=>{
+
+    scheduleViewMode="week";
+    schedulePage=0;
+
+    renderSchedulePage();
+
+};
+
+document.getElementById("monthViewBtn")
+.onclick=()=>{
+
+    scheduleViewMode="month";
+    schedulePage=0;
+
+    renderSchedulePage();
+
+};
+
+document.getElementById("prevScheduleBtn")
+.onclick=()=>{
+
+    schedulePage--;
+
+    renderSchedulePage();
+
+};
+
+document.getElementById("nextScheduleBtn")
+.onclick=()=>{
+
+    schedulePage++;
+
+    renderSchedulePage();
+
+};
+
+
 //追加ここまで
+document.getElementById("historyBtn")
+.addEventListener("click",()=>{
+
+    historyViewMode="week";
+    historyPage=0;
+
+    renderHistoryPage();
+
+    document
+        .getElementById("mainPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("historyPage")
+        .classList.remove("hidden");
+
+});
+
+document.getElementById("historyBackBtn")
+.addEventListener("click",()=>{
+
+    document
+        .getElementById("mainPage")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("historyPage")
+        .classList.add("hidden");
+
+});
+
+
 document
     .getElementById("todayBtn")
     .addEventListener("click", () => {
@@ -1228,33 +1580,20 @@ document.getElementById("todoInput")
         return;
     }
 
-    const isDaily =
-        document.getElementById("dailyFlg").checked;
+    
 
-    if(isDaily){
+    db.singleTodos.push({
+        id:crypto.randomUUID(),
+        createDate:todayStr(),
+        todo:text,
+        completeDate:"",
+        scheduleDate:"",
+        dueDate: "",
+        progressFlag:0,
+        order: db.singleTodos.length
+    });
 
-        db.dailyTodos.push({
-            id:crypto.randomUUID(),
-            todo:text,
-            completeDate:"",
-            scheduleTime:"",
-            weekDays:[]
-        });
-
-    }else{
-
-        db.singleTodos.push({
-            id:crypto.randomUUID(),
-            createDate:todayStr(),
-            todo:text,
-            completeDate:"",
-            scheduleDate:"",
-            dueDate: "",
-            progressFlag:0,
-            order: db.singleTodos.length
-        });
-
-    }
+    
 
     saveData();
 
@@ -1305,6 +1644,23 @@ document.getElementById("clearAllBtn")
 
     saveData();
     render();
+});
+
+document
+.getElementById("historyKeyword")
+.addEventListener("input",()=>{
+
+    renderHistoryPage();
+
+});
+
+document.getElementById("historyClearBtn")
+.addEventListener("click",()=>{
+
+    document.getElementById("historyKeyword").value = "";
+
+    renderHistoryPage();
+
 });
 
 //編集画面OKボタン
@@ -1375,7 +1731,8 @@ document.getElementById("editOkBtn")
     render();
 
     if(editFrom === "schedule"){
-
+        scheduleViewMode="week";
+        schedulePage=0;
         renderSchedulePage();
 
         document
