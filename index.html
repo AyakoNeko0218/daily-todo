@@ -217,9 +217,9 @@ body{
 
         <button id="todayBtn">今日</button>
 
-        <button id="scheduleBtn">予定一覧</button>
+        <button id="scheduleBtn">予定</button>
 
-        <button id="historyBtn">履歴一覧</button>
+        <button id="historyBtn">履歴</button>
 
         
 
@@ -792,13 +792,19 @@ function renderHistoryPage(){
         const span =
         document.createElement("span");
 
-        span.textContent =
-            `☑ ${item.todo}`;
+        if(keyword){
+            span.innerHTML =
+                "☑ " +
+                item.todo.replace(
+                    new RegExp(keyword, "gi"),
+                    match => `<mark>${match}</mark>`
+                );
 
-            
-        
+        }else{
 
-        
+            span.textContent =
+                `☑ ${item.todo}`;
+        }
         row.appendChild(span);
         
         const btnArea =
